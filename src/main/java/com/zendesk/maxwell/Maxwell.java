@@ -266,6 +266,7 @@ public class Maxwell implements Runnable {
 
 	public static void main(String[] args) {
 		try {
+			System.out.println("add something ");
 			Logging.setupLogBridging();
 			MaxwellConfig config = new MaxwellConfig(args);
 
