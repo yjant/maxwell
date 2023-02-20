@@ -217,6 +217,8 @@ public class Maxwell implements Runnable {
 		this.context.setPosition(initPosition);
 
 		MysqlSchemaStore mysqlSchemaStore = new MysqlSchemaStore(this.context, initPosition);
+		//  在这里执行 bootstrap
+		//
 		BootstrapController bootstrapController = this.context.getBootstrapController(mysqlSchemaStore.getSchemaID());
 
 		this.context.startSchemaCompactor();
@@ -227,6 +229,7 @@ public class Maxwell implements Runnable {
 
 		mysqlSchemaStore.getSchema(); // trigger schema to load / capture before we start the replicator.
 
+		// BinlogConnectorReplicator 负责采集binlog，采集之后，发送给producer
 		this.replicator = new BinlogConnectorReplicator(
 			mysqlSchemaStore,
 			producer,
@@ -246,6 +249,8 @@ public class Maxwell implements Runnable {
 		);
 
 		context.setReplicator(replicator);
+		// 这里启动的时候，就启动了一个线程，不断更新position
+		// posistion 的设置是在发送完数据之后。
 		this.context.start();
 
 		replicator.startReplicator();

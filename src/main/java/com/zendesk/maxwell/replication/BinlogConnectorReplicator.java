@@ -192,6 +192,7 @@ public class BinlogConnectorReplicator extends RunLoopProcess implements Replica
 	}
 
 	private boolean replicatorStarted = false;
+	@Override
 	public void startReplicator() throws Exception {
 		this.client.connect(5000);
 		replicatorStarted = true;

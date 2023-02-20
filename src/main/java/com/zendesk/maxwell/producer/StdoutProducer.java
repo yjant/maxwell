@@ -15,6 +15,7 @@ public class StdoutProducer extends AbstractProducer {
 		if ( output != null && r.shouldOutput(outputConfig) )
 			System.out.println(output);
 
+		// 在这里设置偏移量，context 中持有一个 PositionStoreThread线程，PositionStoreThread线程负责后台更新偏移量
 		this.context.setPosition(r);
 	}
 }

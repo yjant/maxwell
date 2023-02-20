@@ -11,6 +11,9 @@ import java.sql.SQLException;
 import com.zendesk.maxwell.replication.BinlogPosition;
 import com.zendesk.maxwell.util.RunLoopProcess;
 
+/**
+ * 记录偏移量到 maxwell.positions
+ */
 public class PositionStoreThread extends RunLoopProcess implements Runnable {
 	static final Logger LOGGER = LoggerFactory.getLogger(PositionStoreThread.class);
 	private Position position; // in memory position
@@ -91,10 +94,12 @@ public class PositionStoreThread extends RunLoopProcess implements Runnable {
 		return false;
 	}
 
+	@Override
 	public void work() throws Exception {
 		Position newPosition = position;
 
 		if ( newPosition != null && newPosition.newerThan(storedPosition) ) {
+			// 这里执行写表操作， 这个方法名写的真差劲
 			store.set(newPosition);
 			storedPosition = newPosition;
 		}
