@@ -286,6 +286,7 @@ public class MaxwellContext {
 	public PositionStoreThread getPositionStoreThread() {
 		if ( this.positionStoreThread == null ) {
 			this.positionStoreThread = new PositionStoreThread(this.positionStore, this);
+			// 调用start，执行线程
 			this.positionStoreThread.start();
 			addTask(positionStoreThread);
 		}
