@@ -404,6 +404,9 @@ public class MaxwellContext {
 			case "redis":
 				this.producer = new MaxwellRedisProducer(this);
 				break;
+			case "http":
+				this.producer = new HttpProducer(this);
+				break;
 			case "none":
 				this.producer = new NoneProducer(this);
 				break;
@@ -497,4 +500,6 @@ public class MaxwellContext {
 	public MaxwellDiagnosticContext getDiagnosticContext() {
 		return this.diagnosticContext;
 	}
+
+
 }

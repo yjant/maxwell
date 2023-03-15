@@ -230,6 +230,8 @@ public class Maxwell implements Runnable {
 		mysqlSchemaStore.getSchema(); // trigger schema to load / capture before we start the replicator.
 
 		// BinlogConnectorReplicator 负责采集binlog，采集之后，发送给producer
+		// 在这里面，生成了一个队列，负责添加binlog消息，
+		// 传递了一个bootstrap进来，进行全量同步的时候，也能把新增的数据同步过去
 		this.replicator = new BinlogConnectorReplicator(
 			mysqlSchemaStore,
 			producer,

@@ -179,6 +179,7 @@ public abstract class AbstractConfig {
 
 	protected MaxwellMysqlConfig parseMysqlConfig(String prefix, OptionSet options, Properties properties) {
 		MaxwellMysqlConfig config = new MaxwellMysqlConfig();
+		// 取命令行参数，如果没有就取配置文件参数
 		config.host     = fetchStringOption(prefix + "host", options, properties, null);
 		config.password = fetchStringOption(prefix + "password", options, properties, null);
 		config.user     = fetchStringOption(prefix + "user", options, properties, null);

@@ -119,6 +119,7 @@ public class BootstrapController extends RunLoopProcess  {
 					return false;
 
 				// async mode with an active task
+				// 匹配是否是正在全量操作的表，如果是就跳过
 				if (activeTask.matches(row)) {
 					skippedRows.add(row);
 					return true;

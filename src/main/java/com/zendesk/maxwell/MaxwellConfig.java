@@ -151,6 +151,9 @@ public class MaxwellConfig extends AbstractConfig {
 	public boolean haMode;
 	public String jgroupsConf;
 	public String raftMemberID;
+	
+	public String postUrl;
+	public String encodeSeed;
 
 	public MaxwellConfig() { // argv is only null in tests
 		this.customProducerProperties = new Properties();
@@ -167,10 +170,12 @@ public class MaxwellConfig extends AbstractConfig {
 	}
 
 	public MaxwellConfig(String argv[]) {
+		// 初始化参数，给参数设置默认值
 		this();
 		this.parse(argv);
 	}
 
+	@Override
 	protected MaxwellOptionParser buildOptionParser() {
 		final MaxwellOptionParser parser = new MaxwellOptionParser();
 		parser.accepts( "config", "location of config.properties file" )
@@ -178,7 +183,7 @@ public class MaxwellConfig extends AbstractConfig {
 
 		parser.separator();
 
-		parser.accepts( "producer", "producer type: stdout|file|kafka|kinesis|pubsub|sqs|rabbitmq|redis|custom" )
+		parser.accepts( "producer", "producer type: stdout|file|kafka|kinesis|pubsub|sqs|rabbitmq|redis|http|custom" )
 				.withRequiredArg();
 		parser.accepts( "client_id", "unique identifier for this maxwell instance, use when running multiple maxwells" )
 				.withRequiredArg();
@@ -463,6 +468,10 @@ public class MaxwellConfig extends AbstractConfig {
 		parser.accepts( "http_diagnostic_timeout", "the http diagnostic response timeout in ms when http_diagnostic=true. default: 10000" ).withRequiredArg().ofType(Integer.class);
 		parser.accepts( "metrics_jvm", "enable jvm metrics: true|false. default: false" ).withRequiredArg().ofType(Boolean.class);
 
+		parser.section( "http" );
+		parser.accepts( "post_url", "post data to this url" ).withRequiredArg();
+		parser.accepts( "encode_seed", "the secret key for encrypting the data sent by post " ).withRequiredArg();
+
 		parser.accepts( "help", "display help" ).withOptionalArg().forHelp();
 
 
@@ -470,11 +479,15 @@ public class MaxwellConfig extends AbstractConfig {
 	}
 
 	private void parse(String [] argv) {
+		// 所有的可选参数
 		MaxwellOptionParser parser = buildOptionParser();
+
 		OptionSet options = parser.parse(argv);
 
+		// 配置的参数
 		Properties properties;
 
+		// 对传递的参数进行验证
 		if (options.has("config")) {
 			properties = parseFile((String) options.valueOf("config"), true);
 		} else {
@@ -493,6 +506,7 @@ public class MaxwellConfig extends AbstractConfig {
 		if (options.has("help"))
 			usage("Help for Maxwell:", parser, (String) options.valueOf("help"));
 
+		// 将传递的参数设置上去
 		setup(options, properties);
 
 		List<?> arguments = options.nonOptionArguments();
@@ -668,6 +682,10 @@ public class MaxwellConfig extends AbstractConfig {
 		this.haMode = fetchBooleanOption("ha", options, properties, false);
 		this.jgroupsConf = fetchStringOption("jgroups_config", options, properties, "raft.xml");
 		this.raftMemberID = fetchStringOption("raft_member_id", options, properties, null);
+
+		this.postUrl = fetchStringOption("post_url",options,properties,null);
+		this.encodeSeed = fetchStringOption("encode_seed",options,properties,null);
+
 	}
 
 	private void setupEncryptionOptions(OptionSet options, Properties properties) {

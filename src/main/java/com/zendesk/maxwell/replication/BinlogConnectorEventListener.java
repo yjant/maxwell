@@ -45,6 +45,9 @@ class BinlogConnectorEventListener implements BinaryLogClient.EventListener {
 		mustStop.set(true);
 	}
 
+	/**
+	 * 用来获取binlog，放入到执行队列中
+	 */
 	@Override
 	public void onEvent(Event event) {
 		long eventSeenAt = 0;

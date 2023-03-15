@@ -34,7 +34,8 @@ public class SynchronousBootstrapper {
 	}
 
 	static final Logger LOGGER = LoggerFactory.getLogger(SynchronousBootstrapper.class);
-	private static final long INSERTED_ROWS_UPDATE_PERIOD_MILLIS = 250;
+//	private static final long INSERTED_ROWS_UPDATE_PERIOD_MILLIS = 250;
+	private static final long INSERTED_ROWS_UPDATE_PERIOD_MILLIS = 1000;
 	private final MaxwellContext context;
 
 	private long lastInsertedRowsUpdateTimeMillis = 0;
@@ -95,6 +96,7 @@ public class SynchronousBootstrapper {
 		try ( Connection streamingConnection = getStreamingConnection(task.database)) {
 			setBootstrapRowToStarted(task.id);
 			ResultSet resultSet = getAllRows(task.database, task.table, table, task.whereClause, streamingConnection);
+
 			int insertedRows = 0;
 			lastInsertedRowsUpdateTimeMillis = 0; // ensure updateInsertedRowsColumn is called at least once
 			while ( resultSet.next() ) {
@@ -110,6 +112,7 @@ public class SynchronousBootstrapper {
 					LOGGER.debug("bootstrapping row : " + row.toJSON());
 
 				producer.push(row);
+				// TODO 这个要删除掉
 				Thread.sleep(1);
 				++insertedRows;
 
