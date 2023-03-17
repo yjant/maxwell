@@ -6,6 +6,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 
+/**
+ * 启动的任务添加到manager里面，  当终止的时候，从这里面拿出所有的线程，然后stop
+ */
 public class TaskManager {
 	private static final Logger LOGGER = LoggerFactory.getLogger(TaskManager.class);
 

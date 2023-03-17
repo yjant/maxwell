@@ -194,6 +194,9 @@ public class Maxwell implements Runnable {
 		}
 	}
 
+	/**
+	 * 启动了 binlog，bootstrap，position 任务，至于schema后面再看
+	 */
 	private void startInner() throws Exception {
 		try ( Connection connection = this.context.getReplicationConnection();
 		      Connection rawConnection = this.context.getRawMaxwellConnection() ) {
@@ -203,6 +206,7 @@ public class Maxwell implements Runnable {
 				MaxwellMysqlStatus.ensureGtidMysqlState(connection);
 			}
 
+			// 创建maxwell初始化的表
 			SchemaStoreSchema.ensureMaxwellSchema(rawConnection, this.config.databaseName);
 
 			try ( Connection schemaConnection = this.context.getMaxwellConnection() ) {
@@ -217,8 +221,7 @@ public class Maxwell implements Runnable {
 		this.context.setPosition(initPosition);
 
 		MysqlSchemaStore mysqlSchemaStore = new MysqlSchemaStore(this.context, initPosition);
-		//  在这里执行 bootstrap
-		//
+		//  在这里执行 bootstrap，获取的数据直接发送到producer端
 		BootstrapController bootstrapController = this.context.getBootstrapController(mysqlSchemaStore.getSchemaID());
 
 		this.context.startSchemaCompactor();
@@ -230,8 +233,8 @@ public class Maxwell implements Runnable {
 		mysqlSchemaStore.getSchema(); // trigger schema to load / capture before we start the replicator.
 
 		// BinlogConnectorReplicator 负责采集binlog，采集之后，发送给producer
-		// 在这里面，生成了一个队列，负责添加binlog消息，
-		// 传递了一个bootstrap进来，进行全量同步的时候，也能把新增的数据同步过去
+		// 传递了一个bootstrap进来，进行全量同步的时候，用于判断新增的binlog是否是正在进行bootstrap的
+		// 在这里面，生成了一个队列，负责添加binlog消息，然后
 		this.replicator = new BinlogConnectorReplicator(
 			mysqlSchemaStore,
 			producer,
@@ -276,6 +279,7 @@ public class Maxwell implements Runnable {
 				Logging.setLevel(config.log_level);
 			}
 
+			// 同时初始化了 context
 			final Maxwell maxwell = new Maxwell(config);
 
 			Runtime.getRuntime().addShutdownHook(new Thread() {

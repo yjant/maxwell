@@ -25,6 +25,7 @@ abstract public class RunLoopProcess implements StoppableTask {
 		this.taskState.awaitStop(thread, timeout);
 	}
 
+	// binlog，bootstrap，schema，position 统一继承当前类，使用这个runloop方法执行
 	public void runLoop() throws Exception {
 		this.thread = Thread.currentThread();
 		this.beforeStart();
