@@ -4,24 +4,24 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zendesk.maxwell.MaxwellContext;
 import com.zendesk.maxwell.row.RowMap;
 import com.zendesk.maxwell.util.AesEncode;
+import com.zendesk.maxwell.util.HttpUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class HttpProducer extends AbstractProducer {
+	public static final Logger LOGGER = LoggerFactory.getLogger(HttpProducer.class);
+
 	final Object lock = new Object();
 	private final String encodeSeed;
-	int bufferPoolSize = 2 << 15;
-	ScheduledExecutorService service = new ScheduledThreadPoolExecutor(2);
-	volatile List<SendData> sendBuffer = new ArrayList<>(bufferPoolSize);
-	AtomicInteger atomicInteger = new AtomicInteger(0);
-	AtomicInteger total = new AtomicInteger(0);
+	int bufferPoolSize = 2 << 10;
+	volatile List<RowMap> sendBuffer = new ArrayList<>(bufferPoolSize);
+	ScheduledExecutorService service = new ScheduledThreadPoolExecutor(1);
 	AesEncode aesEncode;
-	RowMap r;
 	private String postUrl;
 	private ObjectMapper mapper = new ObjectMapper();
 
@@ -29,8 +29,8 @@ public class HttpProducer extends AbstractProducer {
 		super(context);
 		this.postUrl = context.getConfig().postUrl;
 		this.encodeSeed = context.getConfig().encodeSeed;
-		service.scheduleAtFixedRate(new ScheduleTask(), 0, 1000, TimeUnit.MILLISECONDS);
-		aesEncode = new AesEncode("encodeSeed");
+		service.scheduleAtFixedRate(new ScheduleTask(), 0, 2000, TimeUnit.MILLISECONDS);
+		aesEncode = new AesEncode(encodeSeed);
 	}
 
 	@Override
@@ -42,34 +42,45 @@ public class HttpProducer extends AbstractProducer {
 	public void doPush(RowMap r) throws Exception {
 		String output = r.toJSON(outputConfig);
 		if (output != null && r.shouldOutput(outputConfig)) {
-			String database = r.getDatabase();
-			String encodeData = aesEncode.encode(output);
-			SendData sendData = new SendData(database, encodeData);
-			this.r = r;
-			synchronized (lock) {
-				if (sendBuffer.size() >= bufferPoolSize) {
-					sendData();
-					// 在这里设置偏移量，context 中持有一个 PositionStoreThread线程，PositionStoreThread线程负责后台更新偏移量
-					setPosition(r);
-				} else {
+			if (sendBuffer.size() >= bufferPoolSize) {
+				sendData();
 
-					sendBuffer.add(sendData);
-				}
+			}
+			synchronized (lock) {
+				sendBuffer.add(r);
 			}
 		}
 	}
 
 	private void sendData() throws Exception {
+
 		synchronized (lock) {
-			int i = atomicInteger.addAndGet(1);
-			System.out.println("loop " + i);
-			System.out.println("size " + sendBuffer.size());
-			System.out.println("total " + total.addAndGet(sendBuffer.size()));
+			if (sendBuffer.size() < 1) {
+				return;
+			}
+			String batchId = UUID.randomUUID().toString();
+			List<SendData> dataList = new ArrayList<>(sendBuffer.size());
+			RowMap last = sendBuffer.get(sendBuffer.size() - 1);
+			for (RowMap rowMap : sendBuffer) {
+				String output = rowMap.toJSON(outputConfig);
+				String encode = aesEncode.encode(output);
+				dataList.add(new SendData(rowMap.getDatabase(), rowMap.getTable(), "ys", encode, batchId));
+			}
+			String encodeData = mapper.writeValueAsString(dataList);
+			String response = HttpUtil.postJson(postUrl, encodeData);
+			HashMap hashMap = mapper.readValue(response, HashMap.class);
+			String responseCode = hashMap.get("code").toString();
+			if (!Objects.equals(responseCode, "0")) {
+				LOGGER.error("Http report data error!!! response is {}", response);
+				System.exit(0);
+			}
 			sendBuffer = new ArrayList<>(bufferPoolSize);
+			// 在这里设置偏移量，context 中持有一个 PositionStoreThread线程，PositionStoreThread线程负责后台更新偏移量
+			setPosition(last);
 		}
 
-//				HttpUtil.postJson(postUrl,encodeData);
 	}
+
 
 	private void setPosition(RowMap r) {
 		this.context.setPosition(r);
@@ -81,7 +92,6 @@ public class HttpProducer extends AbstractProducer {
 		public void run() {
 			try {
 				sendData();
-				setPosition(r);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -90,11 +100,60 @@ public class HttpProducer extends AbstractProducer {
 
 	class SendData {
 		private String databaseName;
+		private String tableName;
+		private String locode;
 		private String data;
+		private String batchId;
 
-		public SendData(String databaseName, String data) {
+		public SendData() {
+		}
+
+		public SendData(String databaseName, String tableName, String locode, String data, String batchId) {
 			this.databaseName = databaseName;
+			this.tableName = tableName;
+			this.locode = locode;
 			this.data = data;
+			this.batchId = batchId;
+		}
+
+		public String getTableName() {
+			return tableName;
+		}
+
+		public void setTableName(String tableName) {
+			this.tableName = tableName;
+		}
+
+		public String getLocode() {
+			return locode;
+		}
+
+		public void setLocode(String locode) {
+			this.locode = locode;
+		}
+
+		public String getDatabaseName() {
+			return databaseName;
+		}
+
+		public void setDatabaseName(String databaseName) {
+			this.databaseName = databaseName;
+		}
+
+		public String getData() {
+			return data;
+		}
+
+		public void setData(String data) {
+			this.data = data;
+		}
+
+		public String getBatchId() {
+			return batchId;
+		}
+
+		public void setBatchId(String batchId) {
+			this.batchId = batchId;
 		}
 	}
 }

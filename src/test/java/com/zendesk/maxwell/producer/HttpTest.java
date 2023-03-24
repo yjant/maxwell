@@ -22,17 +22,23 @@ public class HttpTest {
 	public void testCount() throws Exception {
 		MaxwellContext context = mock(MaxwellContext.class);
 		MaxwellConfig config = new MaxwellConfig();
+		config.postUrl="http://localhost:8088/data/receive";
+		config.encodeSeed="encodes";
 		when(context.getConfig()).thenReturn(config);
 		when(context.getMetrics()).thenReturn(new NoOpMetrics());
 		HttpProducer producer = new HttpProducer(context);
 		long startTime = System.currentTimeMillis();
 		Random random = new Random();
-		for (int i = 0; i < 1000000; i++) {
-			producer.doPush((new RowMap("insert", "foo", "bar", random.nextLong(), new ArrayList<String>(), new Position(new BinlogPosition(3, "mysql.1"), 0L))));
+//		for (int j = 0; j < 3; j++) {
+			for (int i = 0; i < 1000000; i++) {
+				producer.doPush((new RowMap("insert", "foo", "bar", random.nextLong(), new ArrayList<String>(), new Position(new BinlogPosition(3, "mysql.1"), 0L))));
+//			}
 		}
+
 		long endTime = System.currentTimeMillis();
 		System.out.println(endTime- startTime);
 		Thread.sleep(10000);
+
 
 
 	}

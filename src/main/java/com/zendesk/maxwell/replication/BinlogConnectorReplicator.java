@@ -250,7 +250,7 @@ public class BinlogConnectorReplicator extends RunLoopProcess implements Replica
 
 
 	private boolean shouldSkipRow(RowMap row) throws IOException {
-		// 判断是否是对maxwell 数据库的操作 && 判断是否是对maxwell数据的操作，并且是插入bootstrap的操作
+		// 判断是否是对maxwell 数据库的操作 && 判断是否是对maxwell数据的操作，并且是插入bootstrap表的操作
 		if (isMaxwellRow(row) && !isBootstrapInsert(row))
 			return true;
 

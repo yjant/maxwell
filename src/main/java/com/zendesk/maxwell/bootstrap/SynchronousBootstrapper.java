@@ -113,10 +113,12 @@ public class SynchronousBootstrapper {
 
 				producer.push(row);
 				// TODO 这个要删除掉
-				Thread.sleep(1);
+				Thread.sleep(1000);
 				++insertedRows;
+				if (insertedRows%2000==0) {
+					updateInsertedRowsColumn(insertedRows, task.id);
 
-				updateInsertedRowsColumn(insertedRows, task.id);
+				}
 			}
 			setBootstrapRowToCompleted(insertedRows, task.id);
 		} catch ( NoSuchElementException e ) {
