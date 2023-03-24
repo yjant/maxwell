@@ -110,7 +110,7 @@ public class BootstrapController extends RunLoopProcess  {
 		// The main replication thread skips rows of the currently bootstrapped
 		// table and the tables that are queued for bootstrap. The bootstrap thread replays them at
 		// the end of the bootstrap.
-
+		// task foreach 结束之后会释放锁，这里才会继续执行
 		if ( syncMode )
 			synchronized(bootstrapMutex) { return false; }
 		else {

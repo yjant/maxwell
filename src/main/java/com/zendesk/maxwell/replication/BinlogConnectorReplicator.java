@@ -279,6 +279,8 @@ public class BinlogConnectorReplicator extends RunLoopProcess implements Replica
 		}
 		// 判断是否需要跳过
 		// 不需要跳过的数据直接给到输出端
+		// 有异步和同步的两种bootstrap 方式，当同步方式时，当产生了对业务库的操作，第一条数据过来时，会获取bootstrapMutex锁，一直阻塞着，
+		// 		直到所有的bootstrap都结束， 释放锁之后才能继续执行
 		else if (!shouldSkipRow(row)) {
 			producer.push(row);
 		}
@@ -458,7 +460,9 @@ public class BinlogConnectorReplicator extends RunLoopProcess implements Replica
 				continue;
 			}
 
+			// event 有两部分，一部分是header，另一部分是data
 			EventType eventType = event.getEvent().getHeader().getEventType();
+			// 如果是提交事件，设置xid，写 binlog 的时候先写事务，然后写XID，然后就是提交
 			if (event.isCommitEvent()) {
 				if (!buffer.isEmpty()) {
 					buffer.getLast().setTXCommit();
@@ -604,6 +608,7 @@ public class BinlogConnectorReplicator extends RunLoopProcess implements Replica
 				}
 			}
 
+			// 这里生成一个rowbuffer， 是按照事务提交为单位的，提交一个事务，就生成一个buffer返回。
 			switch (event.getType()) {
 				case WRITE_ROWS:
 				case EXT_WRITE_ROWS:
@@ -621,11 +626,14 @@ public class BinlogConnectorReplicator extends RunLoopProcess implements Replica
 					TableMapEventData data = event.tableMapData();
 					tableCache.processEvent(getSchema(), this.filter, data.getTableId(), data.getDatabase(), data.getTable());
 					break;
+				// mysql 中，使用begin开始一个事务的时候，会产生一个 query event
 				case QUERY:
 					QueryEventData qe = event.queryData();
 					String sql = qe.getSql();
+					// begin， 事务开启了，
 					if (BinlogConnectorEvent.BEGIN.equals(sql)) {
 						try {
+							// 获取begin之后的所有数据，组装成一个buffer
 							rowBuffer = getTransactionRows(event);
 						} catch (ClientReconnectedException e) {
 							// rowBuffer should already be empty by the time we get to this switch

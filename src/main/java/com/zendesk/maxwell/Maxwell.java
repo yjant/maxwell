@@ -200,6 +200,7 @@ public class Maxwell implements Runnable {
 	private void startInner() throws Exception {
 		try ( Connection connection = this.context.getReplicationConnection();
 		      Connection rawConnection = this.context.getRawMaxwellConnection() ) {
+			// 检查复制模式只能是row
 			MaxwellMysqlStatus.ensureReplicationMysqlState(connection);
 			MaxwellMysqlStatus.ensureMaxwellMysqlState(rawConnection);
 			if (config.gtidMode) {
